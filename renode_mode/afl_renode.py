@@ -52,7 +52,6 @@ INFD = FORKSRV_FD - 1
 
 endgame = {0: STATUS_SEGV}
 cpu_name = "sysbus.cpu"
-resc_path = ''  # overriden by afl-renode-trace
 
 
 if shmid != -1:
@@ -89,7 +88,6 @@ def do_one_fuzz():
 
 def do_one_child():
     global status
-    monitor.TryExecuteScript(resc_path)
     monitor.Machine[cpu_name].SetHookAtBlockBegin(log_basic_block)
 
     status = None
@@ -101,7 +99,7 @@ def one_fuzz_complete(status):
     arr.raw = struct.pack('i', status)
     n = write(FORKSRV_FD + 1, arr, 4)
 
-    emulationManager.Clear()
+    monitor.Machine.Reset()
     lseek(INFD, 0, os.SEEK_SET)
     do_one_fuzz()
 
