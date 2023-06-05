@@ -4,6 +4,33 @@ Full-system binary-only instrumentation in Renode for afl-fuzz
 
   (See ../README.md for the general instruction manual.)
 
+0) TL;DR: just run anything
+---------------------------
+
+1. Download latest portable build of Renode from https://builds.renode.io/
+   and unpack it to ~/renode or anywhere else.
+
+2. Build some system to test, e.g. Zephyr shell sample for nRF52840 and
+   copy it to this renode_mode directory (you will need Zephyr SDK, see
+   their docs[0]):
+
+   $ west build -b nrf52840dk_nrf52840 samples/subsys/shell/shell_module
+   $ cp build/zephyr/zephyr.elf /path/to/AFL/renode_mode
+
+[0]: https://docs.zephyrproject.org/latest/develop/getting_started/
+
+3. (If needed, edit the example.resc file; by default nRF52840 is used)
+4. (If needed, edit the afl_uart.py file; serial device might be named
+    differently on other boards/targets)
+5. (If needed, adjust any other constants in afl_renode.py)
+6. Run:
+
+   $ cd /path/to/AFL
+   $ make
+   $ mkdir INPUTS
+   $ echo 'abcdefxyz' > INPUTS/some-testcase  # true corpus works better
+   $ PATH=$PATH:<path-to-renode> AFL_SKIP_BIN_CHECK=1 ./afl-fuzz -t 15000 -i INPUTS -o OUTPUTS -R -- renode_mode/example.resc
+
 1) Introduction
 ---------------
 
