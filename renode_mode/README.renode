@@ -1,0 +1,48 @@
+==============================================================
+Full-system binary-only instrumentation in Renode for afl-fuzz
+==============================================================
+
+  (See ../README.md for the general instruction manual.)
+
+1) Introduction
+---------------
+
+Renode[1] is an open-source simulation framework developed by Antmicro,
+allowing users to run their unmodified software on a range of embedded
+targets, ranging from MCUs to multi-core Linux-capable systems, on
+various architectures, like ARM Cortex-A,R,M, RISC-V, POWER and others.
+Renode allows for single- and multi-node simulation via various
+connectivity methods: Ethernet, BLE, IEEE802.15.4 etc.
+
+[1]: https://www.renode.io
+
+The code in this directory is used for a standalone feature that
+leverages Renode and allows callers to obtain instrumentation output for
+black-box, closed-source binaries for full bare-metal systems rather
+than user-mode executables.  This mechanism can be then used by afl-fuzz
+to stress-test targets in a context of a full system simulation,
+including the OS and HAL level, or targets that couldn't be built as
+user-mode binaries.
+
+The idea is heavily based on deferred fork server mode and QEMU mode.
+
+2) How to use
+-------------
+
+The feature is implemented with a fairly small plugin for Renode.  As
+usual with Renode, you need a Renode script and platform description.
+See its documentation[2] for more details about that.  The default
+harness assumes a single-node setup instrumenting code executed on
+sysbus.cpu and feeding input through sysbus.uart0 char-by-char whenever
+the CPU looks idle.
+
+[2]: https://renode.readthedocs.io/
+
+The example script ready for fuzzing is in the example.resc file.  It is
+based on the nRF52840 platform, but can be easily adapted to other
+Renode-supported targets.
+
+If you want to change the harness, you can do so by copying the
+afl_uart.py file over, changing it, and importing the new file instead
+in your .resc file of choice, 'import antigravity'-style.  See the
+example.resc file for how to do it.

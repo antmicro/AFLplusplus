@@ -1,0 +1,7 @@
+#!/usr/bin/env renode
+
+py "import afl_uart"
+#py "afl_renode.endgame={0: 1}"
+
+$bin?=$ORIGIN/zephyr.elf
+i @scripts/single-node/nrf52840.resc

@@ -147,6 +147,7 @@ static void usage(u8 *argv0, int more_help) {
       "  -O            - use binary-only instrumentation (FRIDA mode)\n"
 #if defined(__linux__)
       "  -Q            - use binary-only instrumentation (QEMU mode)\n"
+      "  -R            - use full board VM fuzzing (Renode mode)\n"
       "  -U            - use unicorn-based instrumentation (Unicorn mode)\n"
       "  -W            - use qemu-based instrumentation with Wine (Wine mode)\n"
 #endif
@@ -976,6 +977,16 @@ int main(int argc, char **argv_orig, char **envp) {
 
         break;
 
+      case 'R':                                                /* Renode mode */
+
+        if (afl->fsrv.renode_mode) { FATAL("Multiple -R options not supported"); }
+
+        afl->fsrv.renode_mode = 1;
+
+        if (!mem_limit_given) { afl->fsrv.mem_limit = MEM_LIMIT_RENODE; }
+
+        break;
+
       case 'N':                                             /* Unicorn mode */
 
         if (afl->no_unlink) { FATAL("Multiple -N options not supported"); }
@@ -1227,14 +1238,6 @@ int main(int argc, char **argv_orig, char **envp) {
         show_help++;
         break;  // not needed
 
-      case 'R':
-
-        FATAL(
-            "Radamsa is now a custom mutator, please use that "
-            "(custom_mutators/radamsa/).");
-
-        break;
-
       default:
         if (!show_help) { show_help = 1; }
 
@@ -1417,6 +1420,7 @@ int main(int argc, char **argv_orig, char **envp) {
     if (afl->crash_mode) { FATAL("-C and -n are mutually exclusive"); }
     if (afl->fsrv.frida_mode) { FATAL("-O and -n are mutually exclusive"); }
     if (afl->fsrv.qemu_mode) { FATAL("-Q and -n are mutually exclusive"); }
+    if (afl->fsrv.renode_mode) { FATAL("-R and -n are mutually exclusive"); }
     if (afl->fsrv.cs_mode) { FATAL("-A and -n are mutually exclusive"); }
     if (afl->unicorn_mode) { FATAL("-U and -n are mutually exclusive"); }
 
@@ -2032,6 +2036,11 @@ int main(int argc, char **argv_orig, char **envp) {
 
     }
 
+  } else if (afl->fsrv.renode_mode) {
+
+      use_argv = get_renode_argv(argv[0], &afl->fsrv.target_path, argc - optind,
+                                 argv + optind);
+
   } else if (afl->fsrv.cs_mode) {
 
     use_argv = get_cs_argv(argv[0], &afl->fsrv.target_path, argc - optind,
@@ -2145,6 +2154,7 @@ int main(int argc, char **argv_orig, char **envp) {
     afl->cmplog_fsrv.trace_bits = afl->fsrv.trace_bits;
     afl->cmplog_fsrv.cs_mode = afl->fsrv.cs_mode;
     afl->cmplog_fsrv.qemu_mode = afl->fsrv.qemu_mode;
+    afl->cmplog_fsrv.renode_mode = afl->fsrv.renode_mode;
     afl->cmplog_fsrv.frida_mode = afl->fsrv.frida_mode;
     afl->cmplog_fsrv.cmplog_binary = afl->cmplog_binary;
     afl->cmplog_fsrv.target_path = afl->fsrv.target_path;

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+origin=$(readlink -f "$(dirname "$0")")
+
+exec 197<&0
+
+pipe=/tmp/afl.$$.$RANDOM
+mkfifo $pipe
+renode --disable-xwt --console --hide-analyzers -e "py \"sys.path.append('$origin/renode_mode'); import afl_renode; afl_renode.resc_path = '$1'; afl_renode.do_one_fuzz()\"" <$pipe &
+exec >$pipe
+rm $pipe
+wait

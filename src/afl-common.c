@@ -344,6 +344,37 @@ char **get_qemu_argv(u8 *own_loc, u8 **target_path_p, int argc, char **argv) {
 
 }
 
+/* Rewrite argv for Renode. */
+
+char **get_renode_argv(u8 *own_loc, u8 **target_path_p, int argc, char **argv) {
+
+  char **new_argv = ck_alloc(sizeof(char *) * (argc + 3));
+  if (unlikely(!new_argv)) { FATAL("Illegal amount of arguments specified"); }
+
+  int status = system("renode --version");
+  if (status == -1) { PFATAL("system() failed"); }
+
+  if (status) {
+    SAYF("\n" cLRD "[-] " cRST
+         "Failed to execute `renode --version` (%s %d).  Is it installed?  Remember to\n"
+         "    add it to your PATH.",
+         WIFEXITED(status) ? "exit status" : "killed with signal",
+         WIFEXITED(status) ? WEXITSTATUS(status) : WTERMSIG(status));
+    FATAL("Failed to locate 'renode'.");
+  }
+
+
+  memcpy(&new_argv[2], &argv[1], (int)(sizeof(char *)) * (argc - 1));
+
+  new_argv[1] = *target_path_p;
+
+  /* Now we need to actually find the Renode binary to put in argv[0]. */
+
+  *target_path_p = new_argv[0] = find_afl_binary(own_loc, "afl-renode-trace");
+  return new_argv;
+
+}
+
 /* Rewrite argv for Wine+QEMU. */
 
 char **get_wine_argv(u8 *own_loc, u8 **target_path_p, int argc, char **argv) {

@@ -146,6 +146,10 @@
 
 #define MEM_LIMIT_QEMU 0U
 
+/* Default memory limit when running in QEMU mode (MB) 0 = disabled : */
+
+#define MEM_LIMIT_RENODE 0U
+
 /* Default memory limit when running in Unicorn mode (MB) 0 = disabled : */
 
 #define MEM_LIMIT_UNICORN 0U
