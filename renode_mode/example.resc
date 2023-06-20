@@ -6,3 +6,4 @@ py "import afl_uart"
 $bin?=$ORIGIN/zephyr.elf
 i @scripts/single-node/nrf52840.resc
 emulation SetGlobalQuantum "0.0001"
+emulation SetGlobalAdvanceImmediately true
