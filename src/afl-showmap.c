@@ -1006,6 +1006,7 @@ static void usage(u8 *argv0) {
       "  -O         - use binary-only instrumentation (FRIDA mode)\n"
 #if defined(__linux__)
       "  -Q         - use binary-only instrumentation (QEMU mode)\n"
+      "  -R         - use full board VM fuzzing (Renode mode)\n"
       "  -U         - use Unicorn-based instrumentation (Unicorn mode)\n"
       "  -W         - use qemu-based instrumentation with Wine (Wine mode)\n"
       "               (Not necessary, here for consistency with other afl-* "
@@ -1094,7 +1095,7 @@ int main(int argc, char **argv_orig, char **envp) {
 
   if (getenv("AFL_QUIET") != NULL) { be_quiet = true; }
 
-  while ((opt = getopt(argc, argv, "+i:I:o:f:m:t:AeqCZOH:QUWbcrshXY")) > 0) {
+  while ((opt = getopt(argc, argv, "+i:I:o:f:m:t:AeqCZOH:QRUWbcrshXY")) > 0) {
 
     switch (opt) {
 
@@ -1272,6 +1273,13 @@ int main(int argc, char **argv_orig, char **envp) {
         fsrv->qemu_mode = true;
         break;
 
+      case 'R':
+
+        if (fsrv->renode_mode) { FATAL("Multiple -R options not supported"); }
+
+        fsrv->renode_mode = true;
+        break;
+
       case 'U':
 
         if (unicorn_mode) { FATAL("Multiple -U options not supported"); }
@@ -1349,6 +1357,7 @@ int main(int argc, char **argv_orig, char **envp) {
   }
 
   if (fsrv->qemu_mode && !mem_limit_given) { fsrv->mem_limit = MEM_LIMIT_QEMU; }
+  if (fsrv->renode_mode && !mem_limit_given) { fsrv->mem_limit = MEM_LIMIT_RENODE; }
   if (unicorn_mode && !mem_limit_given) { fsrv->mem_limit = MEM_LIMIT_UNICORN; }
 
   check_environment_vars(envp);
@@ -1449,6 +1458,11 @@ int main(int argc, char **argv_orig, char **envp) {
                                argv + optind);
 
     }
+
+  } else if (fsrv->renode_mode) {
+
+      use_argv = get_renode_argv(argv[0], &fsrv->target_path, argc - optind,
+                                 argv + optind);
 
   } else if (fsrv->cs_mode) {
 
