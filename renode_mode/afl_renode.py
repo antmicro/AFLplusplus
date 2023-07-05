@@ -51,7 +51,7 @@ STATUS_ABORT = W_EXITCODE(0, signal.SIGABRT)
 INFD = FORKSRV_FD - 1
 
 endgame = {0: STATUS_SEGV}
-cpu_name = "sysbus.cpu"
+sysbus_name = "sysbus"
 
 
 if shmid != -1:
@@ -88,7 +88,8 @@ def do_one_fuzz():
 
 def do_one_child():
     global status
-    monitor.Machine[cpu_name].SetHookAtBlockBegin(log_basic_block)
+    for cpu in monitor.Machine[sysbus_name].GetCPUs():
+        cpu.SetHookAtBlockBegin(log_basic_block)
 
     status = None
     monitor.Machine.LocalTimeSource.SinksReportedHook += do_quantum_hook
@@ -130,7 +131,8 @@ def log_basic_block(pc, size):
     if pc in endgame:
         # defer cleanup and restart to avoid hangs
         status = endgame[pc]
-        monitor.Machine[cpu_name].ClearHookAtBlockBegin()
+        for cpu in monitor.Machine[sysbus_name].GetCPUs():
+            cpu.ClearHookAtBlockBegin()
 
 
 if shmid == -1:

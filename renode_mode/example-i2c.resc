@@ -1,0 +1,9 @@
+#!/usr/bin/env renode
+
+py "import afl_i2c"
+#py "afl_renode.endgame={0: 1}"
+
+# $bin?=$ORIGIN/zephyr.elf
+i $ORIGIN/../../zephyrproject/visual-system-designer-zephyr-demo/efr32bg22.resc
+emulation SetGlobalQuantum "0.0001"
+emulation SetGlobalAdvanceImmediately true
