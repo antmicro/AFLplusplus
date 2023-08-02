@@ -6,7 +6,7 @@ exec 197<&0
 
 pipe=/tmp/afl.$$.$RANDOM
 mkfifo $pipe
-renode --disable-xwt --console --hide-analyzers -e "py \"sys.path.append('$origin/renode_mode'); import afl_renode\"; i @$1; py \"afl_renode.do_one_fuzz()\"" <$pipe &
+renode -e "py \"sys.path.append('$origin/renode_mode'); import afl_renode\"; i @$1; py \"afl_renode.do_one_fuzz()\"" <$pipe &
 exec >$pipe
 rm $pipe
 wait

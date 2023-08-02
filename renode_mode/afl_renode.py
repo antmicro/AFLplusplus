@@ -21,7 +21,11 @@ monitor_module = sys.modules['<module>']
 monitor = monitor_module.monitor
 emulationManager = monitor_module.emulationManager
 
-libc = ctypes.CDLL("libc.so.6", use_errno=True)
+try:
+    libc = ctypes.CDLL("", use_errno=True)
+except SystemError:
+    print("Could not find libdl.so in system libraries or LD_LIBRARY_PATH.  This is likely caused by IronPython using wrong ABI location of libdl.so.2; try to install development headers for libc, or to create a symlink to libdl.so.2 named libdl.so as a workaround.")
+    raise
 
 shmat = libc.shmat
 shmat.restype = ctypes.c_void_p
@@ -30,10 +34,6 @@ shmat.argtypes = (ctypes.c_int, ctypes.c_void_p, ctypes.c_int)
 read = libc.read
 read.restype = ctypes.c_ssize_t
 read.argtypes = (ctypes.c_int, ctypes.c_char_p, ctypes.c_size_t)
-
-lseek = libc.lseek
-lseek.restype = ctypes.c_ssize_t
-lseek.argtypes = (ctypes.c_int, ctypes.c_ssize_t, ctypes.c_int)  # XXX off_t instead of ssize_t
 
 write = libc.write
 write.restype = ctypes.c_ssize_t
@@ -100,8 +100,7 @@ def one_fuzz_complete(status):
     arr.raw = struct.pack('i', status)
     n = write(FORKSRV_FD + 1, arr, 4)
 
-    monitor.Machine.Reset()
-    lseek(INFD, 0, os.SEEK_SET)
+    #monitor.Machine.Reset()
     do_one_fuzz()
 
 
