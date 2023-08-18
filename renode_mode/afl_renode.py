@@ -100,7 +100,8 @@ def one_fuzz_complete(status):
     arr.raw = struct.pack('i', status)
     n = write(FORKSRV_FD + 1, arr, 4)
 
-    #monitor.Machine.Reset()
+    if status != STATUS_SUCCESS:
+        monitor.Machine.Reset()
     do_one_fuzz()
 
 
