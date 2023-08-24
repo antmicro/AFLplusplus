@@ -69,6 +69,13 @@ if shmid != -1:
         raise
 
 
+def start_fuzzing():
+    monitor.Machine.LocalTimeSource.SinksReportedHook += do_quantum_hook
+    for cpu in monitor.Machine[sysbus_name].GetCPUs():
+        cpu.SetHookAtBlockBegin(log_basic_block)
+
+    do_one_fuzz()
+
 def do_one_fuzz():
     n = read(FORKSRV_FD, arr, 4)
 
@@ -85,23 +92,21 @@ def do_one_fuzz():
     afl_mem.contents[0] = 1
     do_one_child()
 
-
+status = None
+reset = False
 def do_one_child():
     global status
-    for cpu in monitor.Machine[sysbus_name].GetCPUs():
-        cpu.SetHookAtBlockBegin(log_basic_block)
-
     status = None
-    monitor.Machine.LocalTimeSource.SinksReportedHook += do_quantum_hook
-    emulationManager.CurrentEmulation.StartAll()
-
 
 def one_fuzz_complete(status):
+    global reset
     arr.raw = struct.pack('i', status)
     n = write(FORKSRV_FD + 1, arr, 4)
 
     if status != STATUS_SUCCESS:
+        status = None
         monitor.Machine.Reset()
+        reset = True
     do_one_fuzz()
 
 
@@ -114,11 +119,17 @@ def quantum_hook():
 
 visited = set()
 def do_quantum_hook():
+    global reset
+    if reset:
+        for cpu in monitor.Machine[sysbus_name].GetCPUs():
+            cpu.SetHookAtBlockBegin(log_basic_block)
+        reset = False
+        return
+
     quantum_hook()
     visited.clear()
 
     if status is not None:
-        monitor.Machine.LocalTimeSource.SinksReportedHook -= do_quantum_hook
         one_fuzz_complete(status)
         return
 
