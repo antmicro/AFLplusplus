@@ -13,13 +13,14 @@ eof = False
 
 def quantum_hook():
     global eof
+
     if len(visited) < IDLE_COUNT:
         n = read(INFD, data, DATA_SIZE)
         for byte in bytearray(data.raw[:n]):
-            monitor.Machine["sysbus.uart0"].WriteChar(byte)
+            monitor.Machine["sysbus.usart4"].WriteChar(byte)
         if n == 0:
             if not eof:
-                monitor.Machine["sysbus.uart0"].WriteChar(0x0a)
+                monitor.Machine["sysbus.usart4"].WriteChar(0x0a)
                 eof = True
                 return
             eof = False
