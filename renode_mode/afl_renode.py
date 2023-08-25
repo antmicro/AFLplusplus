@@ -104,7 +104,6 @@ def one_fuzz_complete(status):
     n = write(FORKSRV_FD + 1, arr, 4)
 
     if status != STATUS_SUCCESS:
-        status = None
         monitor.Machine.Reset()
         reset = True
     do_one_fuzz()
