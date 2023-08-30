@@ -11,16 +11,17 @@ DATA_SIZE = 1
 data = ctypes.create_string_buffer(DATA_SIZE)
 eof = False
 
-def quantum_hook():
+def quantum_hook(mach):
     global eof
 
+    WriteChar = mach["sysbus.usart4"].WriteChar
     if len(visited) < IDLE_COUNT:
         n = read(INFD, data, DATA_SIZE)
         for byte in bytearray(data.raw[:n]):
-            monitor.Machine["sysbus.usart4"].WriteChar(byte)
+            WriteChar(byte)
         if n == 0:
             if not eof:
-                monitor.Machine["sysbus.usart4"].WriteChar(0x0a)
+                WriteChar(0x0a)
                 eof = True
                 return
             eof = False

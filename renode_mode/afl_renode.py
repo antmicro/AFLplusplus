@@ -69,6 +69,27 @@ if shmid != -1:
         raise
 
 
+def ironpython_entry(f):
+    ''' A decorator for debugging entries that may raise unhandled exceptions '''
+    import functools
+    @functools.wraps(f)
+    def wrapper(*args):
+        try:
+            return f()
+        except Exception as e:
+            with open('/dev/stderr', 'w') as fp:
+                import traceback
+                traceback.print_exc(None, fp)
+            raise
+    return wrapper
+
+def do_quit():
+    for cmd in monitor.RegisteredCommands:
+        if cmd.Name == 'quit':
+            cmd.Run(monitor.Interaction)
+            return
+    sys.exit(0)
+
 def start_fuzzing():
     monitor.Machine.LocalTimeSource.SinksReportedHook += do_quantum_hook
     for cpu in monitor.Machine[sysbus_name].GetCPUs():
@@ -79,12 +100,8 @@ def start_fuzzing():
 def do_one_fuzz():
     n = read(FORKSRV_FD, arr, 4)
 
-    if n == 0:
-        for cmd in monitor.RegisteredCommands:
-            if cmd.Name == 'quit':
-                cmd.Run(monitor.Interaction)
-                return
-        sys.exit(0)
+    if n == 0 or (n == -1 and status is not None):
+        return do_quit()
 
     pid = os.getpid()
     arr.raw = struct.pack('i', pid)
@@ -103,13 +120,16 @@ def one_fuzz_complete(status):
     arr.raw = struct.pack('i', status)
     n = write(FORKSRV_FD + 1, arr, 4)
 
+    if n == -1:
+        return do_quit()
+
     if status != STATUS_SUCCESS:
         monitor.Machine.Reset()
         reset = True
     do_one_fuzz()
 
 
-def quantum_hook():
+def quantum_hook(mach):
     '''
     This is the fuzzing harness.  Feel free to override it.
     '''
@@ -117,15 +137,21 @@ def quantum_hook():
         afl_renode.status = STATUS_SUCCESS
 
 visited = set()
+@ironpython_entry
 def do_quantum_hook():
     global reset
+
+    mach = monitor.Machine
+    if mach is None:
+        return do_quit()
+
     if reset:
-        for cpu in monitor.Machine[sysbus_name].GetCPUs():
+        for cpu in mach[sysbus_name].GetCPUs():
             cpu.SetHookAtBlockBegin(log_basic_block)
         reset = False
         return
 
-    quantum_hook()
+    quantum_hook(mach)
     visited.clear()
 
     if status is not None:
