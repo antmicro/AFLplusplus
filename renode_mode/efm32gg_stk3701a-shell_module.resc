@@ -9,7 +9,7 @@ showAnalyzer usart4
 
 macro reset
 """
-    sysbus LoadELF $ORIGIN/echo.elf
+    sysbus LoadELF $ORIGIN/../zephyr-echo.elf
     cpu0 VectorTableOffset `sysbus GetSymbolAddress "_vector_table"`
 
 """
