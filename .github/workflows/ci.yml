@@ -5,19 +5,14 @@ on:
     branches:
       - stable
       - dev
+      - ci-*
   pull_request:
     branches:
       - dev # No need for stable-pull-request, as that equals dev-push
 
 jobs:
   linux:
-    runs-on: "${{ matrix.os }}"
-    strategy:
-      matrix:
-        os: [ubuntu-22.04, ubuntu-20.04]
-    env:
-      AFL_SKIP_CPUFREQ: 1
-      AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES: 1
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
       - name: debug
@@ -33,26 +28,91 @@ jobs:
       - name: install gcc plugin
         run: sudo apt-get install -y -m -f --install-suggests $(readlink /usr/bin/gcc)-plugin-dev
       - name: build afl++
-        run: make distrib ASAN_BUILD=1 NO_NYX=1
+        run: make distrib NO_NYX=1 NO_UNICORN_ARM64=1
+      - name: tar files (https://github.com/actions/upload-artifact/issues/38)
+        run: tar -cf artifact.tar afl-*
+      - uses: actions/upload-artifact@v3
+        with:
+          name: linux-distrib
+          path: artifact.tar
+
+  zephyr:
+    runs-on: ubuntu-22.04
+    env:
+      ZEPHYR_SHA: c03d0f83c82c8b4900fb7a55818c3baeb98fd317
+      ZEPHYR_SDK: 0.16.1
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+      - name: install packages
+        run: sudo apt update -y && sudo apt install -y -m -f ninja-build python3-pyelftools
+      - name: Download SDK
+        run: |
+          wget --progress=dot:giga https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.1/zephyr-sdk-${ZEPHYR_SDK}_linux-x86_64_minimal.tar.xz
+          tar xvf zephyr-sdk*tar.xz
+          cd zephyr-sdk-${ZEPHYR_SDK}
+          ./setup.sh -t arm-zephyr-eabi -h -c
+      - name: Install west
+        run: pip3 install west
+      - name: Build Zephyr
+        run: |
+          mkdir -p ${GITHUB_WORKSPACE}/zephyrproject/zephyr
+          cd ${GITHUB_WORKSPACE}/zephyrproject/zephyr
+          git init
+          git remote add origin https://github.com/zephyrproject-rtos/zephyr
+          git fetch --depth=1 origin $ZEPHYR_SHA
+          git reset --hard FETCH_HEAD
+          pip3 install --user -r scripts/requirements.txt
+          patch -p1 < ${GITHUB_WORKSPACE}/renode_mode/echo_failure.diff
+          source zephyr-env.sh
+          west init -l .
+          west update
+          west build -p -b efr32bg22_brd4184a samples/subsys/console/echo
+          cp build/zephyr/zephyr.elf ${GITHUB_WORKSPACE}/zephyr-echo.elf
+      - uses: actions/upload-artifact@v3
+        with:
+          name: zephyr
+          path: zephyr-echo.elf
+
+
+  linux-renode-demo:
+    runs-on: ubuntu-22.04
+    needs: [zephyr, linux]
+    env:
+      AFL_BENCH_UNTIL_CRASH: 1
+      AFL_EXIT_ON_TIME: 30
+      AFL_SKIP_BIN_CHECK: 1
+      AFL_SKIP_CPUFREQ: 1
+      AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES: 1
+      AFL_FORKSRV_INIT_TMOUT: 600000
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/download-artifact@v3
+        with:
+          name: linux-distrib
+      - uses: actions/download-artifact@v3
+        with:
+          name: zephyr
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+      - name: untar files (https://github.com/actions/upload-artifact/issues/38)
+        run: tar -xf artifact.tar
+      - name: install Renode
+        run: |
+          python3 -m pip install git+https://github.com/antmicro/renode-run
+          renode-run download 1.14.0
+          cat ~/.config/renode/renode-run.path >> $GITHUB_PATH
+      - name: fix IronPython wrong ABI
+        run: |
+          ln -s /lib/x86_64-linux-gnu/libdl.so.2 `cat ~/.config/renode/renode-run.path`/libdl
       - name: run tests
-        run: sudo -E ./afl-system-config; make tests
- # macos:
- #   runs-on: macOS-latest
- #   env:
- #     AFL_MAP_SIZE: 65536
- #     AFL_SKIP_CPUFREQ: 1
- #     AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES: 1
- #   steps:
- #     - uses: actions/checkout@v3
- #     - name: install
- #       run: brew install make gcc llvm
- #     - name: fix install
- #       run: cd /usr/local/bin; ln -s gcc-11 gcc; ln -s g++-11 g++; which gcc; gcc -v
- #     - name: build
- #       run: export PATH=/usr/local/Cellar/llvm/*/":$PATH"; export CC=/usr/local/Cellar/llvm/*/bin/clang; export CXX="$CC"++; export LLVM_CONFIG=/usr/local/Cellar/llvm/*/bin/llvm-config; sudo -E ./afl-system-config; gmake ASAN_BUILD=1
- #     - name: frida
- #       run: export CC=/usr/local/Cellar/llvm/*/bin/clang; export CXX="$CC"++; cd frida_mode; gmake
- #     - name: run tests
- #       run: sudo -E ./afl-system-config; export CC=/usr/local/Cellar/llvm/*/bin/clang; export CXX="$CC"++; export PATH=/usr/local/Cellar/llvm/*/":/usr/local/bin:$PATH"; export LLVM_CONFIG=/usr/local/Cellar/llvm/*/bin/llvm-config; gmake tests
- #     - name: force frida test for MacOS
- #       run: export AFL_PATH=`pwd`; /usr/local/bin/gcc -o test-instr test-instr.c; mkdir in; echo > in/in; AFL_NO_UI=1 ./afl-fuzz -O -i in -o out -V 5 -- ./test-instr
+        run: |
+          mkdir INPUT
+          echo > INPUT/x
+          date
+          time ./afl-fuzz -R -i INPUT -o OUTPUT -t 300000 -- renode_mode/example-uart.resc
+          date
+
