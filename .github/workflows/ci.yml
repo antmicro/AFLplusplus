@@ -69,7 +69,7 @@ jobs:
           source zephyr-env.sh
           west init -l .
           west update
-          west build -p -b efr32bg22_brd4184a samples/subsys/console/echo
+          west build -p -b efr32mg_sltb004a samples/subsys/console/echo
           cp build/zephyr/zephyr.elf ${GITHUB_WORKSPACE}/zephyr-echo.elf
       - uses: actions/upload-artifact@v3
         with:

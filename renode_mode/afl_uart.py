@@ -14,7 +14,7 @@ eof = False
 def quantum_hook(mach):
     global eof
 
-    WriteChar = mach["sysbus.usart4"].WriteChar
+    WriteChar = mach["sysbus.usart0"].WriteChar
     if len(visited) < IDLE_COUNT:
         n = read(INFD, data, DATA_SIZE)
         for byte in bytearray(data.raw[:n]):

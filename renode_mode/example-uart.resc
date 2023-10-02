@@ -3,7 +3,7 @@
 py "import afl_uart"
 #py "afl_renode.endgame={0: 1}"
 
-i $ORIGIN/efm32gg_stk3701a-shell_module.resc
+i $ORIGIN/efr32mg_sltb004a.resc
 emulation SetGlobalQuantum "0.0001"
 emulation SetGlobalAdvanceImmediately true
 s

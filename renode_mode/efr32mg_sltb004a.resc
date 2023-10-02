@@ -1,0 +1,6 @@
+mach create
+machine LoadPlatformDescription $ORIGIN/efr32mg_sltb004a.repl
+sysbus LoadELF $ORIGIN/../zephyr-echo.elf
+using sysbus
+showAnalyzer usart0
+
