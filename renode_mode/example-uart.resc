@@ -1,7 +1,6 @@
 #!/usr/bin/env renode
 
 py "import afl_uart"
-#py "afl_renode.endgame={0: 1}"
 
 i $ORIGIN/efr32mg_sltb004a.resc
 emulation SetGlobalQuantum "0.0001"

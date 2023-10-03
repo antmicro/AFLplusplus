@@ -6,9 +6,11 @@ exec 197<&0
 
 pipe=/tmp/afl.$$.$RANDOM
 mkfifo $pipe
+
+# Replace with the commented line below to gain access to Renode graphical interface
+renode --disable-xwt --console --hide-analyzers  -e "py \"sys.path.append('$origin/renode_mode'); import afl_renode\"; i @$1; py \"afl_renode.start_fuzzing()\"" <$pipe &
 #renode -e "py \"sys.path.append('$origin/renode_mode'); import afl_renode\"; i @$1; py \"afl_renode.start_fuzzing()\"" <$pipe &
 
-renode --disable-xwt --console --hide-analyzers  -e "py \"sys.path.append('$origin/renode_mode'); import afl_renode\"; i @$1; py \"afl_renode.start_fuzzing()\"" <$pipe &
 exec >$pipe
 rm $pipe
 wait
