@@ -99,9 +99,6 @@ jobs:
           python3 -m pip install git+https://github.com/antmicro/renode-run
           renode-run download 1.14.0
           cat ~/.config/renode/renode-run.path >> $GITHUB_PATH
-      - name: fix IronPython wrong ABI
-        run: |
-          ln -s /lib/x86_64-linux-gnu/libdl.so.2 `cat ~/.config/renode/renode-run.path`/libdl
       - name: run tests
         run: |
           mkdir INPUT
