@@ -31,6 +31,10 @@ Full-system binary-only instrumentation in Renode for afl-fuzz
    $ echo 'abcdefxyz' > INPUTS/some-testcase  # true corpus works better
    $ PATH=$PATH:<path-to-renode> AFL_SKIP_BIN_CHECK=1 ./afl-fuzz -t 15000 -i INPUTS -o OUTPUTS -R -- renode_mode/example.resc
 
+Note:
+
+    While ``renode_mode/example.resc`` is executable, it shouldn't be run as a separate, standalone Renode script - it depends on several settings provided by ``afl-renode-trace``.
+
 1) Introduction
 ---------------
 
